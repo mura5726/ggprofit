@@ -1,5 +1,5 @@
-.csv
-.txt
+out.csv
+tournaments/*.txt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -24,13 +24,18 @@ This project is a web application for tracking your performance in poker tournam
 	```
     cd ggprofit
 	```
-	
+
 3. **Install the required packages:**
 	```
     pip install -r requirements.txt
 	```
 
-4. **Run the Streamlit app:**
+4. **Download txt from game craft and place it in the tournaments folder:**
+	```
+	mkdir tournaments
+	```
+
+5. **Run the Streamlit app:**
 	```
     streamlit run app.py
 	```

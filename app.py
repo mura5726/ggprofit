@@ -256,3 +256,13 @@ else:
         st.write(f"In The Money (%): {itm_ratio:.2f}%")
         st.write(f"Average ROI: {avg_roi:.2f}%")  # 修正された行
         st.write(f"Total Profit: {filtered_df['Profit'].sum():.2f}")
+
+# 画面の下部にTwitterリンクを追加
+st.markdown(
+    """
+    ---
+    
+    Follow me on X: [kacchimu](https://twitter.com/kacchimu)
+    """,
+    unsafe_allow_html=True,
+)

@@ -16,30 +16,30 @@ This project is a web application for tracking your performance in poker tournam
 ### Step-by-step Setup
 
 1. **Clone the repository:**
-    \`\`\`
-    git clone https://github.com/mura5726/ggprofit.git
-    \`\`\`
+	```
+    git clone git@github.com:mura5726/ggprofit.git
+	```
 
 2. **Navigate to the project directory:**
-    \`\`\`
+	```
     cd ggprofit
-    \`\`\`
-
+	```
+	
 3. **Install the required packages:**
-    \`\`\`
+	```
     pip install -r requirements.txt
-    \`\`\`
+	```
 
 4. **Run the Streamlit app:**
-    \`\`\`
+	```
     streamlit run app.py
-    \`\`\`
+	```
     
 ---
 
 ## Folder Structure
 
-\`\`\`
+```
 poker-tournament-profit-tracker/
 │
 ├── app.py                      # Main Streamlit application file
@@ -53,7 +53,7 @@ poker-tournament-profit-tracker/
 ├── out.csv                     # Output file
 └── README.md                   # Documentation
 
-\`\`\`
+```
 
 ---
 

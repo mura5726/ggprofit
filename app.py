@@ -139,7 +139,7 @@ df.to_csv('out.csv')
 st.title("Poker Tournament Profit Tracker")
 
 # File uploader
-uploaded_files = st.file_uploader("Choose a file", type=["txt"], accept_multiple_files=True)
+uploaded_files = st.file_uploader("Choose txt files", type=["txt"], accept_multiple_files=True)
 
 if uploaded_files:
     for uploaded_file in uploaded_files:

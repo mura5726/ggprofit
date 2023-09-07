@@ -5,10 +5,14 @@ import streamlit as st
 import re
 from datetime import datetime
 
-def parse_file(filepath):
-    with open(filepath, 'r') as f:
-        content = f.read()
-        lines = content.splitlines()
+def parse_file(filepath=None, lines=None):
+    if filepath:
+        with open(filepath, 'r') as f:
+            content = f.read()
+            lines = content.splitlines()
+    elif lines is None:
+        print("Either filepath or lines must be provided.")
+        return None
 
     try:
         line_parts = lines[0].split(", ", 1)
@@ -97,10 +101,10 @@ try:
     for filename in os.listdir(directory_path):
         if filename.endswith(".txt"):
             filepath = os.path.join(directory_path, filename)
-            parse_result = parse_file(filepath)
+            parse_result = parse_file(filepath=filepath)
 
             if parse_result is not None:
-                tournament_id, tournament_name, buy_in, earning, start_time, entry_count = parse_file(filepath)
+                tournament_id, tournament_name, buy_in, earning, start_time, entry_count = parse_file(filepath=filepath)
                 new_row = pd.DataFrame({'Tournament ID': [tournament_id], 'Tournament Name': [tournament_name], 'Buy-in': [buy_in], 'Earning': [earning], 'Start Time': [start_time], 'Entry Count': [entry_count]}, dtype=object)
                 df = pd.concat([df, new_row], ignore_index=True)
 
@@ -134,18 +138,56 @@ df.to_csv('out.csv')
 # Streamlit display
 st.title("Poker Tournament Profit Tracker")
 
+# File uploader
+uploaded_files = st.file_uploader("Choose a file", type=["txt"], accept_multiple_files=True)
+
+if uploaded_files:
+    for uploaded_file in uploaded_files:
+        # File content can be read here and parsed accordingly
+        content = uploaded_file.read().decode()
+        lines = content.splitlines()
+        
+        # File parsing (ここで先ほどのparse_file関数を使います)
+        tournament_id, tournament_name, buy_in, earning, start_time, entry_count = parse_file(lines=lines)
+
+        # Append data to existing dataframe
+        new_row = pd.DataFrame({
+            'Tournament ID': [tournament_id],
+            'Tournament Name': [tournament_name],
+            'Buy-in': [buy_in],
+            'Earning': [earning],
+            'Start Time': [start_time],
+            'Entry Count': [entry_count]
+        }, dtype=object)
+        new_row.to_csv('new_row.csv')
+        df = pd.concat([df, new_row], ignore_index=True)
+
+    # Sort df by Start Time
+    df['Start Time'] = pd.to_datetime(df['Start Time'])
+    df = df.sort_values('Start Time')
+
+    # Calculate Profit and Cumulative Profit
+    df['Profit'] = df['Earning'] - df['Buy-in']
+    df['Cumulative Profit'] = df['Profit'].cumsum()
+
+    # Add record index for plotting
+    df['Record Index'] = df.reset_index().index
+    
+    # Export df
+    df.to_csv('out.csv')  
+
 # Arrange Date and Buy-in filters in a row
 col1, col2, col3 = st.columns(3)
 col4, col5 = st.columns(2)
 
 # Date range filter
-default_since = pd.to_datetime("2022-09-12").date()
+default_since = df['Start Time'].min().date()
 default_until = df['Start Time'].max().date()
 since = col1.date_input("Since", min_value=df['Start Time'].min().date(), max_value=df['Start Time'].max().date(), value=default_since)
 until = col2.date_input("Until", min_value=df['Start Time'].min().date(), max_value=df['Start Time'].max().date(), value=default_until)
 
 # Buy-in slider filter
-min_buyin = df['Buy-in'].min()
+min_buyin = 0
 max_buyin = df['Buy-in'].max()
 selected_buyin_range = col3.slider("Buy-in Range", int(min_buyin), int(max_buyin), (int(min_buyin), int(max_buyin)))
 

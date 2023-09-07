@@ -159,7 +159,6 @@ if uploaded_files:
             'Start Time': [start_time],
             'Entry Count': [entry_count]
         }, dtype=object)
-        new_row.to_csv('new_row.csv')
         df = pd.concat([df, new_row], ignore_index=True)
 
     # Sort df by Start Time
@@ -180,74 +179,80 @@ if uploaded_files:
 col1, col2, col3 = st.columns(3)
 col4, col5 = st.columns(2)
 
-# Date range filter
-default_since = df['Start Time'].min().date()
-default_until = df['Start Time'].max().date()
-since = col1.date_input("Since", min_value=df['Start Time'].min().date(), max_value=df['Start Time'].max().date(), value=default_since)
-until = col2.date_input("Until", min_value=df['Start Time'].min().date(), max_value=df['Start Time'].max().date(), value=default_until)
-
-# Buy-in slider filter
-min_buyin = 0
-max_buyin = df['Buy-in'].max()
-selected_buyin_range = col3.slider("Buy-in Range", int(min_buyin), int(max_buyin), (int(min_buyin), int(max_buyin)))
-
-# Tournament tag filter
-TAGS = ["JOPT", "WSOP", "GGMasters", "Zodiac", "Step to", "Mega to", 
-"Last Chance to", "Global MILLION", "Turbo", "Hyper", "Bounty",
-"WSOPC", "#", "Seats", "Flip & Go"]
-selected_tags = col4.multiselect("Tournament Tags", TAGS, default=[])
-
-# Apply filters
-filtered_df = df[(df['Start Time'].dt.date >= since) & (df['Start Time'].dt.date <= until)]
-filtered_df = filtered_df[(filtered_df['Buy-in'] >= selected_buyin_range[0]) & (filtered_df['Buy-in'] <= selected_buyin_range[1])]
-filtered_df = filtered_df[filtered_df['Tournament Name'].str.contains('|'.join(selected_tags))]
-
-# Recalculate Cumulative Profit
-filtered_df = filtered_df.sort_values('Start Time')
-filtered_df['Cumulative Profit'] = filtered_df['Profit'].cumsum()
-
-
-# Choose X-axis
-x_axis_choice = col5.selectbox("Choose X-axis", ["Start Time", "Record Index"])
-
-# Reset index if Record Index is the chosen x-axis
-if x_axis_choice == 'Record Index':
-    filtered_df['Record Index'] = filtered_df.reset_index().index
-
-# If filtered_df is empty, display a message
-if filtered_df.empty:
+if df.empty:
     st.write("No data to display.")
+    st.image('howtouse.png', caption='How to use this app')
 else:
-    # Generate the chart with the filtered data
-    chart = alt.Chart(filtered_df, width=600, height=400).mark_line().encode(
-        x=alt.X(f'{x_axis_choice}:Q' if x_axis_choice == "Record Index" else f'{x_axis_choice}:T', title=x_axis_choice),
-        y=alt.Y('Cumulative Profit:Q', title='Cumulative Profit'),
-        tooltip=[alt.Tooltip('Tournament ID:N', title='Tournament ID'),
-                 alt.Tooltip('Tournament Name:N', title='Tournament Name'),
-                 alt.Tooltip('Start Time:T', title='Start Time'),
-                 alt.Tooltip('Cumulative Profit:Q', title='Cumulative Profit')]
-    ).properties(
-        width=600,
-        height=400
-    ).interactive()
 
-    st.write(chart)
+    # Date range filter
+    default_since = df['Start Time'].min().date()
+    default_until = df['Start Time'].max().date()
+    since = col1.date_input("Since", min_value=df['Start Time'].min().date(), max_value=df['Start Time'].max().date(), value=default_since)
+    until = col2.date_input("Until", min_value=df['Start Time'].min().date(), max_value=df['Start Time'].max().date(), value=default_until)
 
-    # バイインが0でない場合のみでフィルタリング
-    non_zero_buyin_df = filtered_df[filtered_df['Buy-in'] != 0]
+    # Buy-in slider filter
+    min_buyin = 0
+    max_buyin = df['Buy-in'].max()
+    selected_buyin_range = col3.slider("Buy-in Range", int(min_buyin), int(max_buyin), (int(min_buyin), int(max_buyin)))
 
-    # ROIが計算可能な場合のみ平均を計算
-    if not non_zero_buyin_df.empty:
-        avg_roi = ((non_zero_buyin_df['Profit'] / non_zero_buyin_df['Buy-in']) * 100).mean()
+    # Tournament tag filter
+    TAGS = ["JOPT", "WSOP", "GGMasters", "Zodiac", "Step to", "Mega to", 
+    "Last Chance to", "Global MILLION", "Turbo", "Hyper", "Bounty",
+    "WSOPC", "#", "Seats", "Flip & Go"]
+    selected_tags = col4.multiselect("Tournament Tags", TAGS, default=[])
+
+    # Apply filters
+    filtered_df = df[(df['Start Time'].dt.date >= since) & (df['Start Time'].dt.date <= until)]
+    filtered_df = filtered_df[(filtered_df['Buy-in'] >= selected_buyin_range[0]) & (filtered_df['Buy-in'] <= selected_buyin_range[1])]
+    filtered_df = filtered_df[filtered_df['Tournament Name'].str.contains('|'.join(selected_tags))]
+
+    # Recalculate Cumulative Profit
+    filtered_df = filtered_df.sort_values('Start Time')
+    filtered_df['Cumulative Profit'] = filtered_df['Profit'].cumsum()
+
+
+    # Choose X-axis
+    x_axis_choice = col5.selectbox("Choose X-axis", ["Start Time", "Record Index"])
+
+    # Reset index if Record Index is the chosen x-axis
+    if x_axis_choice == 'Record Index':
+        filtered_df['Record Index'] = filtered_df.reset_index().index
+
+    # If filtered_df is empty, display a message
+    if filtered_df.empty:
+        st.write("No data to display.")
+        st.image('howtouse.png', caption='How to use this app')
     else:
-        avg_roi = 0  # または 'N/A', 何も計算できない場合
+        # Generate the chart with the filtered data
+        chart = alt.Chart(filtered_df, width=600, height=400).mark_line().encode(
+            x=alt.X(f'{x_axis_choice}:Q' if x_axis_choice == "Record Index" else f'{x_axis_choice}:T', title=x_axis_choice),
+            y=alt.Y('Cumulative Profit:Q', title='Cumulative Profit'),
+            tooltip=[alt.Tooltip('Tournament ID:N', title='Tournament ID'),
+                     alt.Tooltip('Tournament Name:N', title='Tournament Name'),
+                     alt.Tooltip('Start Time:T', title='Start Time'),
+                     alt.Tooltip('Cumulative Profit:Q', title='Cumulative Profit')]
+        ).properties(
+            width=600,
+            height=400
+        ).interactive()
 
-    # Additional stats below the graph
-    st.write("### Statistics")
-    st.write(f"Total Tournaments: {len(filtered_df)}")
-    st.write(f"Total Entries: {filtered_df['Entry Count'].sum()}")
-    st.write(f"Average Profit: {filtered_df['Profit'].mean():.2f}")
-    st.write(f"Average Buy-in: {filtered_df['Buy-in'].mean():.2f}")
-    st.write(f"In The Money (%): {itm_ratio:.2f}%")
-    st.write(f"Average ROI: {avg_roi:.2f}%")  # 修正された行
-    st.write(f"Total Profit: {filtered_df['Profit'].sum():.2f}")
+        st.write(chart)
+
+        # バイインが0でない場合のみでフィルタリング
+        non_zero_buyin_df = filtered_df[filtered_df['Buy-in'] != 0]
+
+        # ROIが計算可能な場合のみ平均を計算
+        if not non_zero_buyin_df.empty:
+            avg_roi = ((non_zero_buyin_df['Profit'] / non_zero_buyin_df['Buy-in']) * 100).mean()
+        else:
+            avg_roi = 0  # または 'N/A', 何も計算できない場合
+
+        # Additional stats below the graph
+        st.write("### Statistics")
+        st.write(f"Total Tournaments: {len(filtered_df)}")
+        st.write(f"Total Entries: {filtered_df['Entry Count'].sum()}")
+        st.write(f"Average Profit: {filtered_df['Profit'].mean():.2f}")
+        st.write(f"Average Buy-in: {filtered_df['Buy-in'].mean():.2f}")
+        st.write(f"In The Money (%): {itm_ratio:.2f}%")
+        st.write(f"Average ROI: {avg_roi:.2f}%")  # 修正された行
+        st.write(f"Total Profit: {filtered_df['Profit'].sum():.2f}")

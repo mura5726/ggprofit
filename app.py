@@ -72,16 +72,22 @@ def parse_file(filepath=None, lines=None):
         start_time = None
 
     try:
-        reentry_line = next((line for line in lines if 're-entries' in line.lower()), None)
-        if reentry_line:
-            reentry_match = re.search(r"You made (\d+) re-entries", reentry_line)
-            if reentry_match:
-                reentry_count = int(reentry_match.group(1)) + 1  # リエントリー回数 + 初回のエントリー
-            else:
-                print(f"Could not parse re-entry count in {filepath}")
-                reentry_count = 1  # 初回のエントリーのみ
+        patterns = [
+            r"You made (\d+) re-entries",
+            r"re-entered (\d+) times",
+            r"You made (\d+)-entries"
+        ]
+        reentry_count = 1  # 初期値（初回のエントリーのみ）
+        for pattern in patterns:
+            reentry_line = next((line for line in lines if re.search(pattern, line)), None)
+            if reentry_line:
+                reentry_match = re.search(pattern, reentry_line)
+                if reentry_match:
+                    reentry_count = int(reentry_match.group(1)) + 1  # リエントリー回数 + 初回のエントリー
+                    break
         else:
-            reentry_count = 1  # 初回のエントリーのみ
+            print(f"Could not parse re-entry count in {filepath}")
+
     except (IndexError, ValueError, StopIteration, AttributeError):
         print(f"Could not parse re-entry count in {filepath}")
         reentry_count = 1  # 初回のエントリーのみ

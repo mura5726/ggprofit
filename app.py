@@ -5,6 +5,25 @@ import streamlit as st
 import re
 from datetime import datetime
 
+from currency_converter import CurrencyConverter
+
+def get_eur_usd_rate() -> float:
+    """
+    CurrencyConverter を利用した EUR-USD 為替を取得する関数。
+    """
+    res0 = CurrencyConverter()
+    crate = res0.convert(1, 'EUR', 'USD')
+    return round(crate, 2)
+
+def get_cny_usd_rate() -> float:
+    """
+    CurrencyConverter を利用した CNY-USD 為替を取得する関数。
+    """
+    res0 = CurrencyConverter()
+    crate = res0.convert(1, 'CNY', 'USD')
+    return round(crate, 2)
+
+
 def parse_file(filepath=None, lines=None):
     if filepath:
         with open(filepath, 'r') as f:
@@ -31,9 +50,9 @@ def parse_file(filepath=None, lines=None):
             currency, amount = part[0], part[1]
             amount = float(amount.replace(',', ''))
             if currency == "€":
-                amount *= 1.18
+                amount *= get_eur_usd_rate()
             elif currency == "¥":
-                amount *= 0.15
+                amount *= get_cny_usd_rate()
             buy_in += amount
     except IndexError:
         print(f"Could not parse Buy-in in {filepath}")
@@ -47,9 +66,9 @@ def parse_file(filepath=None, lines=None):
             earning_str = re.search(r'(\$|\€|\¥)([0-9,]+(\.[0-9]{1,2})?)', earning_line).group(2)
             earning = float(earning_str.replace(',', ''))
             if '€' in earning_line:
-                earning *= 1.18
+                earning *= get_eur_usd_rate()
             elif '¥' in earning_line:
-                earning *= 0.15
+                earning *= get_cny_usd_rate()
     except (IndexError, ValueError, AttributeError):
         print(f"Could not parse Earning in {filepath}")
         earning = 0.0

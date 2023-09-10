@@ -3,7 +3,6 @@ import pandas as pd
 import altair as alt
 import streamlit as st
 import re
-from datetime import datetime
 
 def parse_file(filepath=None, lines=None):
     if filepath:
@@ -17,11 +16,14 @@ def parse_file(filepath=None, lines=None):
     try:
         line_parts = lines[0].split(", ", 1)
         tournament_id = line_parts[0].split("#")[1].strip()
-        tournament_name = line_parts[1] if len(line_parts) > 1 else "Unknown"
+        line_right_parts = line_parts[1].rsplit(", ", 1)
+        tournament_name = line_right_parts[0] if len(line_right_parts) > 1 else "Unknown"
+        tournament_game_type = line_right_parts[1] if len(line_right_parts) > 1 else "Unknown"
     except IndexError:
         print(f"Could not parse tournament ID or name in {filepath}")
         tournament_id = "Unknown"
         tournament_name = "Unknown"
+        tournament_game_type = "Unknown"
 
     try:
         buy_in_line = lines[1]
@@ -94,11 +96,11 @@ def parse_file(filepath=None, lines=None):
 
     buy_in *= reentry_count  # リエントリー回数に応じてバイイン金額を更新
 
-    return tournament_id, tournament_name, buy_in, earning, start_time, reentry_count
+    return tournament_id, tournament_name, tournament_game_type, buy_in, earning, start_time, reentry_count
 
 # Initialize DataFrame with dtype
 # Tournament Name column added for demonstration. Please populate it correctly.
-df = pd.DataFrame(columns=['Tournament ID', 'Tournament Name', 'Buy-in', 'Earning', 'Start Time', 'Entry Count'], dtype=object)
+df = pd.DataFrame(columns=['Tournament ID', 'Tournament Name', 'Tournament GameType', 'Buy-in', 'Earning', 'Start Time', 'Entry Count'], dtype=object)
 
 # Directory where the text files are stored (please adjust this path accordingly)
 directory_path = "./tournaments/"
@@ -110,8 +112,8 @@ try:
             parse_result = parse_file(filepath=filepath)
 
             if parse_result is not None:
-                tournament_id, tournament_name, buy_in, earning, start_time, entry_count = parse_file(filepath=filepath)
-                new_row = pd.DataFrame({'Tournament ID': [tournament_id], 'Tournament Name': [tournament_name], 'Buy-in': [buy_in], 'Earning': [earning], 'Start Time': [start_time], 'Entry Count': [entry_count]}, dtype=object)
+                tournament_id, tournament_name, tournament_game_type, buy_in, earning, start_time, entry_count = parse_file(filepath=filepath)
+                new_row = pd.DataFrame({'Tournament ID': [tournament_id], 'Tournament Name': [tournament_name], 'Tournament GameType': [tournament_game_type], 'Buy-in': [buy_in], 'Earning': [earning], 'Start Time': [start_time], 'Entry Count': [entry_count]}, dtype=object)
                 df = pd.concat([df, new_row], ignore_index=True)
 
 except Exception as e:
@@ -139,7 +141,7 @@ df['Cumulative Profit'] = df['Profit'].cumsum()
 df['Record Index'] = df.reset_index().index
 
 # Export df
-df.to_csv('out.csv')  
+df.to_csv('out.csv')
 
 # Streamlit display
 st.title("Poker Tournament Profit Tracker")
@@ -152,14 +154,15 @@ if uploaded_files:
         # File content can be read here and parsed accordingly
         content = uploaded_file.read().decode()
         lines = content.splitlines()
-        
+
         # File parsing (ここで先ほどのparse_file関数を使います)
-        tournament_id, tournament_name, buy_in, earning, start_time, entry_count = parse_file(lines=lines)
+        tournament_id, tournament_name, tournament_game_type, buy_in, earning, start_time, entry_count = parse_file(lines=lines)
 
         # Append data to existing dataframe
         new_row = pd.DataFrame({
             'Tournament ID': [tournament_id],
             'Tournament Name': [tournament_name],
+            'Tournament GameType': [tournament_game_type],
             'Buy-in': [buy_in],
             'Earning': [earning],
             'Start Time': [start_time],
@@ -177,13 +180,13 @@ if uploaded_files:
 
     # Add record index for plotting
     df['Record Index'] = df.reset_index().index
-    
+
     # Export df
-    df.to_csv('out.csv')  
+    df.to_csv('out.csv')
 
 # Arrange Date and Buy-in filters in a row
 col1, col2, col3 = st.columns(3)
-col4, col5 = st.columns(2)
+col4, col5, col6 = st.columns(3)
 
 if df.empty:
     st.write("No data to display.")
@@ -207,10 +210,17 @@ else:
     "WSOPC", "#", "Seats", "Flip & Go"]
     selected_tags = col4.multiselect("Tournament Tags", TAGS, default=[])
 
+    # Select Game Type
+    game_type_list= df.drop_duplicates(subset='Tournament GameType')['Tournament GameType'].to_list()
+    game_type_list.insert(0, '')
+    selected_game_type = col6.selectbox('Tournament GameType', options=game_type_list)
+
     # Apply filters
     filtered_df = df[(df['Start Time'].dt.date >= since) & (df['Start Time'].dt.date <= until)]
     filtered_df = filtered_df[(filtered_df['Buy-in'] >= selected_buyin_range[0]) & (filtered_df['Buy-in'] <= selected_buyin_range[1])]
     filtered_df = filtered_df[filtered_df['Tournament Name'].str.contains('|'.join(selected_tags))]
+    if selected_game_type != '':
+        filtered_df = filtered_df[filtered_df['Tournament GameType'] == selected_game_type]
 
     # Recalculate Cumulative Profit
     filtered_df = filtered_df.sort_values('Start Time')
@@ -267,7 +277,7 @@ else:
 st.markdown(
     """
     ---
-    
+
     Follow me on X: [kacchimu](https://twitter.com/kacchimu)
     """,
     unsafe_allow_html=True,

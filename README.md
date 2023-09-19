@@ -64,7 +64,7 @@ poker-tournament-profit-tracker/
 
 ## Usage
 
-After running the Streamlit app, navigate to \`http://localhost:8501\` in your web browser. Use the filters provided to analyze your tournament data.
+After running the Streamlit app, navigate to `http://localhost:8501` in your web browser. Use the filters provided to analyze your tournament data.
 
 ---
 

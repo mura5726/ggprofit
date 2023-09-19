@@ -57,6 +57,37 @@ def parse_file(filepath=None, lines=None):
         earning = 0.0
 
     try:
+        players_line = lines[2]
+        players = players_line.replace('Players', '')
+        players = players.strip(' ').strip('\n')
+        players = int(players)
+    except IndexError:
+        print(f"Could not parse players in {filepath}")
+        players = 0
+
+    try:
+        total_prize_line = lines[3]
+        total_prize = total_prize_line.replace('Total Prize Pool: $', '')
+        total_prize = total_prize.strip(' ').strip('\n')
+    except IndexError:
+        print(f"Could not parse total prize in {filepath}")
+        total_prize = 0
+
+    try:
+        rank_line = lines[5]
+        rank = rank_line.split(':')[0]
+        rank = rank.strip(' ').strip('\n')
+        # 順位補正
+        rank = rank.replace('1st', '1')
+        rank = rank.replace('2nd', '2')
+        rank = rank.replace('3rd', '3')
+        rank = rank.replace('th', '')
+
+    except IndexError:
+        print(f"Could not parse total prize in {filepath}")
+        rank = 'Unknown'
+
+    try:
         start_time_line = next((line for line in lines if 'Tournament started' in line), None)
         if start_time_line:
             start_time_match = re.search(r"(\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2})", start_time_line)
@@ -96,11 +127,11 @@ def parse_file(filepath=None, lines=None):
 
     buy_in *= reentry_count  # リエントリー回数に応じてバイイン金額を更新
 
-    return tournament_id, tournament_name, tournament_game_type, buy_in, earning, start_time, reentry_count
+    return tournament_id, tournament_name, tournament_game_type, buy_in, earning, start_time, reentry_count, players, total_prize, rank
 
 # Initialize DataFrame with dtype
 # Tournament Name column added for demonstration. Please populate it correctly.
-df = pd.DataFrame(columns=['Tournament ID', 'Tournament Name', 'Tournament GameType', 'Buy-in', 'Earning', 'Start Time', 'Entry Count'], dtype=object)
+df = pd.DataFrame(columns=['Tournament ID', 'Tournament Name', 'Tournament GameType', 'Buy-in', 'Earning', 'Start Time', 'Players', 'Total Prize Pool' 'Rank', 'Entry Count'], dtype=object)
 
 # Directory where the text files are stored (please adjust this path accordingly)
 directory_path = "./tournaments/"
@@ -112,8 +143,17 @@ try:
             parse_result = parse_file(filepath=filepath)
 
             if parse_result is not None:
-                tournament_id, tournament_name, tournament_game_type, buy_in, earning, start_time, entry_count = parse_file(filepath=filepath)
-                new_row = pd.DataFrame({'Tournament ID': [tournament_id], 'Tournament Name': [tournament_name], 'Tournament GameType': [tournament_game_type], 'Buy-in': [buy_in], 'Earning': [earning], 'Start Time': [start_time], 'Entry Count': [entry_count]}, dtype=object)
+                tournament_id, tournament_name, tournament_game_type, buy_in, earning, start_time, entry_count, players, total_prize, rank = parse_file(filepath=filepath)
+                new_row = pd.DataFrame({
+                    'Tournament ID': [tournament_id],
+                    'Tournament Name': [tournament_name],
+                    'Tournament GameType': [tournament_game_type],
+                    'Buy-in': [buy_in], 'Earning': [earning],
+                    'Start Time': [start_time],
+                    'Players': [players],
+                    'Total Prize Pool': [total_prize],
+                    'Rank': [rank],
+                    'Entry Count': [entry_count]}, dtype=object)
                 df = pd.concat([df, new_row], ignore_index=True)
 
 except Exception as e:
@@ -156,7 +196,7 @@ if uploaded_files:
         lines = content.splitlines()
 
         # File parsing (ここで先ほどのparse_file関数を使います)
-        tournament_id, tournament_name, tournament_game_type, buy_in, earning, start_time, entry_count = parse_file(lines=lines)
+        tournament_id, tournament_name, tournament_game_type, buy_in, earning, start_time, entry_count, players, total_prize, rank = parse_file(lines=lines)
 
         # Append data to existing dataframe
         new_row = pd.DataFrame({
@@ -166,6 +206,9 @@ if uploaded_files:
             'Buy-in': [buy_in],
             'Earning': [earning],
             'Start Time': [start_time],
+            'Players': [players],
+            'Total Prize Pool': [total_prize],
+            'Rank': [rank],
             'Entry Count': [entry_count]
         }, dtype=object)
         df = pd.concat([df, new_row], ignore_index=True)
@@ -185,7 +228,7 @@ if uploaded_files:
     df.to_csv('out.csv')
 
 # Arrange Date and Buy-in filters in a row
-col1, col2, col3 = st.columns(3)
+col1, col2, col3, col7 = st.columns(4)
 col4, col5, col6 = st.columns(3)
 
 if df.empty:
@@ -203,6 +246,11 @@ else:
     min_buyin = 0
     max_buyin = df['Buy-in'].max()
     selected_buyin_range = col3.slider("Buy-in Range", int(min_buyin), int(max_buyin), (int(min_buyin), int(max_buyin)))
+
+    # Players slider filter
+    min_players = 0
+    max_players = df['Players'].max()
+    selected_players_range = col7.slider('Players Range', int(min_players), int(max_players), (int(min_players), int(max_players)))
 
     # Tournament tag filter
     TAGS = ["JOPT", "WSOP", "GGMasters", "Zodiac", "Step to", "Mega to", 

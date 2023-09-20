@@ -1,4 +1,5 @@
 out.csv
+history.csv
 tournaments/*.txt
 .DS_Store
 

@@ -9,10 +9,33 @@ import math
 from currency_converter import CurrencyConverter
 from datetime import datetime, timedelta
 
+# 定数定義
+# Buy-in 閾値
+BUY_IN_HIGH_DSP = 'High'
+BUY_IN_HIGH_RANGE = '(\$100\~)'
+BUY_IN_MEDIUM_DSP = 'Medium'
+BUY_IN_MEDIUM_RANGE = '(\$16\~\$99)'
+BUY_IN_LOW_DSP = 'Low'
+BUY_IN_LOW_RANGE = '(\$5\~\$15)'
+BUY_IN_MICRO_DSP = 'Micro'
+BUY_IN_MICRO_RANGE = '(\~\$4)'
+BUY_IN_FREEROLL_DSP = 'FREEROLL'
+BUY_IN_FREEROLL_RANGE = '(\$0)'
+
+# 順位閾値
+RANK_PAR_BEST = 'BEST(~5%)'
+RANK_PAR_VERY_GOOD = 'VERY GOOD(5%~10%)'
+RANK_PAR_GOOD = 'GOOD(10%~15%)'
+RANK_PAR_FAIR = 'FAIR(15%~)'
+
+# 過去履歴情報
+HISTORY_DISPLAY_MAX = 100
+HISTORY_DAY_MAX = 180
+
 @dataclasses.dataclass(frozen=True)
 class Cols:
     """
-    列名を、定数として持っておく。
+    out.csvの列名を、定数として持っておく。
     """
     TOURNAMENT_ID: str = 'Tournament ID'
     TOURNAMENT_NAME: str = 'Tournament Name'
@@ -34,22 +57,6 @@ class Cols:
     PROFIT: str = 'Profit'
     CUMULATIVE_PROFIT: str = 'Cumulative Profit'
     RECORD_INDEX: str = 'Record Index'
-
-BUY_IN_HIGH_DSP = 'High'
-BUY_IN_HIGH_LANGE = '(\$100\~)'
-BUY_IN_MEDIUM_DSP = 'Medium'
-BUY_IN_MEDIUM_LANGE = '(\$16\~\$99)'
-BUY_IN_LOW_DSP = 'Low'
-BUY_IN_LOW_LANGE = '(\$5\~\$15)'
-BUY_IN_MICRO_DSP = 'Micro'
-BUY_IN_MICRO_LANGE = '(\~\$4)'
-BUY_IN_FREEROLL_DSP = 'FREEROLL'
-BUY_IN_FREEROLL_LANGE = '(\$0)'
-
-RANK_PAR_BEST = 'BEST(~5%)'
-RANK_PAR_VERY_GOOD = 'VERY GOOD(5%~10%)'
-RANK_PAR_GOOD = 'GOOD(10%~15%)'
-RANK_PAR_FAIR = 'FAIR(15%~)'
 
 def get_eur_usd_rate() -> float:
     """
@@ -137,39 +144,18 @@ def parse_file(filepath=None, lines=None):
 
     try:
         buy_in_line = lines[1]
-        # buy_in_parts = re.findall(r'(\$|\€|\¥)([0-9,]+(\.[0-9]{1,2})?)', buy_in_line)
-        # buy_in = 0.0
-
-        # for part in buy_in_parts:
-
-        #     currency, amount = part[0], part[1]
-        #     amount = float(amount.replace(',', ''))
-        #     if currency == '€':
-        #         amount *= get_eur_usd_rate()
-        #     elif currency == '¥':
-        #         amount *= get_cny_usd_rate()
-        #     buy_in += amount
-
+        buy_in_parts = re.findall(r'(\$|\€|\¥)([0-9,]+(\.[0-9]{1,2})?)', buy_in_line)
         buy_in = 0.0
-        currency = '$'
-        line_ = buy_in_line.split(':')[1]
-        # 通貨判定
-        if '€' in line_:
-            currency = '€'
-        elif '¥' in line_:
-            currency = '¥'
 
-        if '+' in line_:
-            for line__ in line_.split('+'):
-                amount = line__.replace(currency, '')
-                buy_in += float(amount)
-        else:
-            buy_in = float(line_.replace(currency, ''))
+        for part in buy_in_parts:
 
-        if currency == '€':
-            buy_in *= get_eur_usd_rate()
-        elif currency == '¥':
-            buy_in *= get_cny_usd_rate()
+            currency, amount = part[0], part[1]
+            amount = float(amount.replace(',', ''))
+            if currency == '€':
+                amount *= get_eur_usd_rate()
+            elif currency == '¥':
+                amount *= get_cny_usd_rate()
+            buy_in += amount
 
     except IndexError:
         print(f"Could not parse Buy-in in {filepath}")
@@ -470,13 +456,13 @@ else:
         BUY_IN_HIGH_DSP
         ]
     selected_buy_in_tags = col_12.multiselect('Buy-in Tags'
-                                               + '  \n'
-                                               + BUY_IN_FREEROLL_DSP + BUY_IN_FREEROLL_LANGE
-                                               + BUY_IN_MICRO_DSP + BUY_IN_MICRO_LANGE
-                                               + '\n'
-                                               + BUY_IN_LOW_DSP + BUY_IN_LOW_LANGE
-                                               + BUY_IN_MEDIUM_DSP + BUY_IN_MEDIUM_LANGE
-                                               + BUY_IN_HIGH_DSP + BUY_IN_HIGH_LANGE, Buy_IN_TAGS, default=[])
+                                            + '  \n'
+                                            + BUY_IN_FREEROLL_DSP + BUY_IN_FREEROLL_RANGE
+                                            + BUY_IN_MICRO_DSP + BUY_IN_MICRO_RANGE
+                                            + '\n'
+                                            + BUY_IN_LOW_DSP + BUY_IN_LOW_RANGE
+                                            + BUY_IN_MEDIUM_DSP + BUY_IN_MEDIUM_RANGE
+                                            + BUY_IN_HIGH_DSP + BUY_IN_HIGH_RANGE, Buy_IN_TAGS, default=[])
 
     # Select Game Type
     game_type_list= df.drop_duplicates(subset=Cols.TOURNAMENT_GAME_TYPE)[Cols.TOURNAMENT_GAME_TYPE].to_list()
@@ -549,13 +535,13 @@ else:
         IMT_df = filtered_df.copy()
         IMT_df = IMT_df[filtered_df[Cols.RANK_PARCENT_CATEGORY] != '']
 
-        # イン ザ マネー分配カテゴリの順序を定義
+        # イン・ザ・マネー分配カテゴリの順序を定義
         rank_par_category_order = [RANK_PAR_FAIR, RANK_PAR_GOOD, RANK_PAR_VERY_GOOD, RANK_PAR_BEST]
 
-        # イン ザ マネー分配カテゴリ列をCategorical型に変換してカスタム順序を指定
+        # イン・ザ・マネー分配カテゴリ列をCategorical型に変換してカスタム順序を指定
         IMT_df[Cols.RANK_PARCENT_CATEGORY] = pd.Categorical(IMT_df[Cols.RANK_PARCENT_CATEGORY], categories=rank_par_category_order, ordered=True)
 
-        # イン ザ マネー分配カテゴリ列でデータフレームを並び替え
+        # イン・ザ・マネー分配カテゴリ列でデータフレームを並び替え
         IMT_df.sort_values(by=Cols.BUY_IN_CATEGORY, inplace=True)
 
         df_target = IMT_df.groupby(Cols.RANK_PARCENT_CATEGORY).count() / len(IMT_df) * 100
@@ -565,14 +551,14 @@ else:
 
         # Tournament History
         # 現在の日付から180日前（6か月前）の日付を計算
-        dt_6months_ago = datetime.now() - timedelta(days=180)
+        dt_6months_ago = datetime.now() - timedelta(days=HISTORY_DAY_MAX)
         # 直近6か月のトーナメント成績をフィルタリング
         history_df = filtered_df[filtered_df[Cols.START_TIME] >= dt_6months_ago]
         # ソート
         history_df.sort_values(Cols.START_TIME, ascending=False, inplace=True)
-        if len(history_df) > 100:
-           # 100件を抽出
-            history_df = history_df.iloc[0:99, :]
+        if len(history_df) > HISTORY_DISPLAY_MAX:
+            # 100件を抽出
+            history_df = history_df.iloc[0:HISTORY_DISPLAY_MAX -1, :]
         # インデックスを変更
         history_df = history_df.set_index(Cols.TOURNAMENT_ID)
 
@@ -701,17 +687,6 @@ else:
         # 時間帯別集計
         st.subheader('時間帯別集計')
         st.dataframe(time_zone_df)
-
-        # 結果を表示
-        # print("曜日別のROI:")
-        # print(daywise_roi)
-        # print(day_count)
-        # print(pd.merge(day_count, daywise_roi, on=Cols.DAY_OF_WEEK))
-
-        # print("\n時間帯別のROI:")
-        # print(timewise_roi)
-        # print(time_zone_count)
-        # print(pd.merge(time_zone_count, timewise_roi, on=Cols.TIME_ZONE))
 
 # 画面の下部にTwitterリンクを追加
 st.markdown(

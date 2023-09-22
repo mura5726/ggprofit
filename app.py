@@ -11,22 +11,22 @@ from datetime import datetime, timedelta
 
 # 定数定義
 # Buy-in 閾値
-BUY_IN_HIGH_DSP = 'High'
-BUY_IN_HIGH_RANGE = '(\$100\~)'
-BUY_IN_MEDIUM_DSP = 'Medium'
-BUY_IN_MEDIUM_RANGE = '(\$16\~\$99)'
-BUY_IN_LOW_DSP = 'Low'
-BUY_IN_LOW_RANGE = '(\$5\~\$15)'
-BUY_IN_MICRO_DSP = 'Micro'
-BUY_IN_MICRO_RANGE = '(\~\$4)'
 BUY_IN_FREEROLL_DSP = 'FREEROLL'
-BUY_IN_FREEROLL_RANGE = '(\$0)'
+BUY_IN_FREEROLL_RANGE = '($0)'
+BUY_IN_MICRO_DSP = 'Micro'
+BUY_IN_MICRO_RANGE = '(~$4)'
+BUY_IN_LOW_DSP = 'Low'
+BUY_IN_LOW_RANGE = '($5~$15)'
+BUY_IN_MEDIUM_DSP = 'Medium'
+BUY_IN_MEDIUM_RANGE = '($16~$99)'
+BUY_IN_HIGH_DSP = 'High'
+BUY_IN_HIGH_RANGE = '($100~)'
 
 # 順位閾値
-RANK_PAR_BEST = 'BEST(~5%)'
-RANK_PAR_VERY_GOOD = 'VERY GOOD(5%~10%)'
-RANK_PAR_GOOD = 'GOOD(10%~15%)'
 RANK_PAR_FAIR = 'FAIR(15%~)'
+RANK_PAR_GOOD = 'GOOD(10%~15%)'
+RANK_PAR_VERY_GOOD = 'VERY GOOD(5%~10%)'
+RANK_PAR_BEST = 'BEST(~5%)'
 
 # 過去履歴情報
 HISTORY_DISPLAY_MAX = 100
@@ -81,45 +81,6 @@ def get_usd_jpy_rate() -> float:
     res0 = CurrencyConverter()
     crate = res0.convert(1, 'USD', 'JPY')
     return round(crate, 2)
-
-def categorize_buyin(buyin: float) -> str:
-    """
-    バイインをカテゴリに振り分ける関数
-    High:$100以上
-    Medium: $15より大きく、$100未満
-    Low: $5以上、$15以下
-    Micro:$0より大きく、$5未満
-    FREEROLL:$0
-    """
-    if buyin >= 100:
-        return BUY_IN_HIGH_DSP
-    elif 15 < buyin < 100:
-        return BUY_IN_MEDIUM_DSP
-    elif 5 <= buyin <= 15:
-        return BUY_IN_LOW_DSP
-    elif buyin == 0:
-        return BUY_IN_FREEROLL_DSP
-    else:
-        return BUY_IN_MICRO_DSP
-
-def categorize_rank_parcent(rank_parcent: float) -> str:
-    """
-    バイインをカテゴリに振り分ける関数
-    BEST:5%以下
-    VERY GOOD: 5%より大きく、10%以下
-    GOOD: 10%より大きく、15%以下
-    FAIR:15%より大きい
-    """
-    if rank_parcent == 0:
-        return ''
-    elif rank_parcent <= 5:
-        return RANK_PAR_BEST
-    elif 5 < rank_parcent <= 10:
-        return RANK_PAR_VERY_GOOD
-    elif 10 < rank_parcent <= 15:
-        return RANK_PAR_GOOD
-    else:
-        return RANK_PAR_FAIR
 
 def parse_file(filepath=None, lines=None):
     if filepath:
@@ -308,6 +269,225 @@ try:
 except Exception as e:
     print(f"An error occurred while reading files from {directory_path}: {e}")
 
+def categorize_buyin(buyin: float) -> str:
+    """
+    バイインをカテゴリに振り分ける関数
+    FREEROLL:$0
+    Micro:$0より大きく、$5未満
+    Low: $5以上、$15以下
+    Medium: $15より大きく、$100未満
+    High:$100以上
+    """
+    if buyin >= 100:
+        return BUY_IN_HIGH_DSP
+    elif 15 < buyin < 100:
+        return BUY_IN_MEDIUM_DSP
+    elif 5 <= buyin <= 15:
+        return BUY_IN_LOW_DSP
+    elif buyin == 0:
+        return BUY_IN_FREEROLL_DSP
+    else:
+        return BUY_IN_MICRO_DSP
+
+def categorize_rank_parcent(rank_parcent: float) -> str:
+    """
+    バイインをカテゴリに振り分ける関数
+    FAIR:15%より大きい
+    GOOD: 10%より大きく、15%以下
+    VERY GOOD: 5%より大きく、10%以下
+    BEST:5%以下
+    """
+    if rank_parcent == 0:
+        return ''
+    elif rank_parcent <= 5:
+        return RANK_PAR_BEST
+    elif 5 < rank_parcent <= 10:
+        return RANK_PAR_VERY_GOOD
+    elif 10 < rank_parcent <= 15:
+        return RANK_PAR_GOOD
+    else:
+        return RANK_PAR_FAIR
+
+def show_in_the_money_distribution(df: pd.DataFrame) -> None:
+    """
+    イン・ザ・マネー分配の棒グラフを表示する関数
+    """
+    # イン・ザ・マネー分配カテゴリの順序を定義
+    rank_par_category_order = [RANK_PAR_FAIR, RANK_PAR_GOOD, RANK_PAR_VERY_GOOD, RANK_PAR_BEST]
+
+    # イン・ザ・マネー分配
+    IMT_df = df.copy()
+    IMT_df = IMT_df[IMT_df[Cols.RANK_PARCENT_CATEGORY] != '']
+
+    # イン・ザ・マネー分配カテゴリ列をCategorical型に変換してカスタム順序を指定
+    IMT_df[Cols.RANK_PARCENT_CATEGORY] \
+        = pd.Categorical(IMT_df[Cols.RANK_PARCENT_CATEGORY],
+                        categories=rank_par_category_order, ordered=True)
+
+    # イン・ザ・マネー分配カテゴリ列でデータフレームを並び替え
+    IMT_df.sort_values(by=Cols.BUY_IN_CATEGORY, inplace=True)
+
+    df_target = IMT_df.groupby(Cols.RANK_PARCENT_CATEGORY).count() / len(IMT_df) * 100
+
+    st.subheader('イン・ザ・マネー分配')
+    st.bar_chart(df_target['Tournament ID'])
+
+def show_day_of_week(df: pd.DataFrame, non_zero_buyin_df: pd.DataFrame) -> None:
+    """
+    曜日別集計を表示する関数
+    """
+    # 曜日別のROIを計算
+    daywise_roi = round((non_zero_buyin_df.groupby(Cols.DAY_OF_WEEK)[Cols.PROFIT].sum() / non_zero_buyin_df.groupby(Cols.DAY_OF_WEEK)[Cols.TOTAL_BUY_IN].sum()) * 100, 2)
+    daywise_roi = daywise_roi.reset_index()
+    daywise_roi = daywise_roi.rename(columns={0: 'ROI'})
+
+    # 曜日別のAv ROIを計算
+    daywise_av_roi = round(non_zero_buyin_df.groupby(Cols.DAY_OF_WEEK)['Av ROI'].mean(), 2)
+    daywise_av_roi = daywise_av_roi.reset_index()
+    daywise_av_roi = daywise_av_roi.rename(columns={0: 'Av ROI'})
+
+    # 曜日の順序を定義
+    day_order = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+
+    # 曜日別の参加数
+    day_count = df.groupby(Cols.DAY_OF_WEEK).size().reset_index(name='Total Tournaments')
+
+    # 曜日列をCategorical型に変換してカスタム順序を指定
+    day_count[Cols.DAY_OF_WEEK] = pd.Categorical(day_count[Cols.DAY_OF_WEEK], categories=day_order, ordered=True)
+
+    # 曜日列でデータフレームを並び替え
+    day_count.sort_values(by=Cols.DAY_OF_WEEK, inplace=True)
+
+    # データフレームをマージ
+    day_of_week_df_ = pd.merge(day_count, daywise_roi, on=Cols.DAY_OF_WEEK)
+    day_of_week_df = pd.merge(day_of_week_df_, daywise_av_roi, on=Cols.DAY_OF_WEEK)
+
+    # インデックスを変更
+    day_of_week_df.set_index(Cols.DAY_OF_WEEK, inplace=True)
+
+    # 曜日別集計
+    st.subheader('曜日別集計')
+    st.dataframe(day_of_week_df)
+
+def show_time_zone(df: pd.DataFrame, non_zero_buyin_df: pd.DataFrame) -> None:
+    """
+    時間帯別集計を表示する関数
+    """
+    # 時間帯別のROIを計算
+    timewise_roi = round((non_zero_buyin_df.groupby(Cols.TIME_ZONE)[Cols.PROFIT].sum() / non_zero_buyin_df.groupby(Cols.TIME_ZONE)[Cols.TOTAL_BUY_IN].sum()) * 100, 2)
+    timewise_roi = timewise_roi.reset_index()
+    timewise_roi = timewise_roi.rename(columns={0: 'ROI'})
+
+    # 時間帯別のAv ROIを計算
+    timewise_av_roi = round(non_zero_buyin_df.groupby(Cols.TIME_ZONE)['Av ROI'].mean(), 2)
+    timewise_av_roi = timewise_av_roi.reset_index()
+    timewise_av_roi = timewise_av_roi.rename(columns={0: 'Av ROI'})
+
+    # 時間帯別の参加数
+    time_zone_count = df.groupby(Cols.TIME_ZONE).size().reset_index(name='Total Tournaments')
+
+    # データフレームをマージ
+    time_zone_df_ = pd.merge(time_zone_count, timewise_roi, on=Cols.TIME_ZONE)
+    time_zone_df = pd.merge(time_zone_df_, timewise_av_roi, on=Cols.TIME_ZONE)
+
+    # インデックスを変更
+    time_zone_df.set_index(Cols.TIME_ZONE, inplace=True)
+
+    # 時間帯別集計
+    st.subheader('時間帯別集計')
+    st.dataframe(time_zone_df)
+
+def show_tournament_history(df: pd.DataFrame, day_max: int, display_max: int) -> pd.DataFrame:
+    """
+    直近のトーナメント成績を表示する関数
+    """
+    # Tournament History
+    # 現在の日付からday_max日前の日付を計算
+    dt_6months_ago = datetime.now() - timedelta(days=day_max)
+    # 直近のトーナメント成績をフィルタリング
+    history_df = df[df[Cols.START_TIME] >= dt_6months_ago]
+    # トーナメント開始時間の降順ソート
+    history_df.sort_values(Cols.START_TIME, ascending=False, inplace=True)
+
+    # 表示件数オーバしている場合
+    if len(history_df) > display_max:
+        # 表示件数を抽出
+        history_df = history_df.iloc[0:display_max -1, :]
+
+    # インデックスを変更
+    history_df.set_index(Cols.TOURNAMENT_ID, inplace=True)
+
+    st.subheader('Tournament History')
+    st.dataframe(history_df)
+
+    # Export df
+    history_df.to_csv('history.csv')
+
+    return history_df
+
+def show_buy_in_breakdown(df: pd.DataFrame) -> None:
+    """
+    バイインの内訳を表示する関数
+    """
+    # グループ化してトーナメント数をカウント
+    buyin_tournament_count_df = df.groupby(Cols.BUY_IN_CATEGORY).size().reset_index(name='Tournaments Count')
+
+    # グループ化して合計獲得賞金を集計
+    buyin_prize_df = df.groupby(Cols.BUY_IN_CATEGORY).agg({Cols.PRIZE: 'sum'}).reset_index()
+    # 列名をリネーム
+    buyin_prize_df.rename(columns={Cols.PRIZE: 'Total Prize'}, inplace=True)
+
+    # インマネ数をカウント
+    buyin_profit_df = df[df[Cols.PROFIT] > 0]
+    buyin_ITM_df = buyin_profit_df.groupby(Cols.BUY_IN_CATEGORY).size().reset_index(name='ITM Count')
+
+    # データフレームをマージ
+    buyin_beakdown_ = pd.merge(buyin_ITM_df, buyin_tournament_count_df, on=Cols.BUY_IN_CATEGORY)
+    buyin_beakdown = pd.merge(buyin_beakdown_, buyin_prize_df, on=Cols.BUY_IN_CATEGORY)
+
+    # インマネ率を算出
+    buyin_beakdown['IMT(%)'] = round(buyin_beakdown['ITM Count'] / buyin_beakdown['Tournaments Count'] * 100, 2)
+
+    # バイインカテゴリの順序を定義
+    buyin_category_order = [BUY_IN_FREEROLL_DSP, BUY_IN_MICRO_DSP, BUY_IN_LOW_DSP, BUY_IN_MEDIUM_DSP, BUY_IN_HIGH_DSP]
+
+    loc_count = 10
+    for category in buyin_category_order:
+        if category not in buyin_beakdown.values:
+            buyin_beakdown.loc[str(loc_count)] = [category, 0, 0, 0, 0]
+            loc_count += 1
+
+    # バイインカテゴリ列をCategorical型に変換してカスタム順序を指定
+    buyin_beakdown[Cols.BUY_IN_CATEGORY] = pd.Categorical(buyin_beakdown[Cols.BUY_IN_CATEGORY], categories=buyin_category_order, ordered=True)
+
+    # バイインカテゴリ列でデータフレームを並び替え
+    buyin_beakdown.sort_values(by=Cols.BUY_IN_CATEGORY, inplace=True)
+
+    # インデックスを変更
+    buyin_beakdown.set_index(Cols.BUY_IN_CATEGORY, inplace=True)
+
+    list_1 = []
+    for i in range(len(buyin_category_order)):
+        list_1.append(str(buyin_beakdown.iloc[i, 3]) + '% (' + str(buyin_beakdown.iloc[i, 0]) + ' / ' + str(buyin_beakdown.iloc[i, 1]) + ')')
+
+    list_2 = []
+    for i in range(len(buyin_category_order)):
+        list_2.append('$' + str(round(buyin_beakdown.iloc[i, 2], 2)))
+
+    df_tm = pd.DataFrame(columns=buyin_category_order)
+    df_tm.loc['イン ザ マネー %'] = list_1
+    df_tm.loc['合計賞金'] = list_2
+
+    # バイインの内訳
+    st.subheader('バイインの内訳')
+    st.write(BUY_IN_FREEROLL_DSP + BUY_IN_FREEROLL_RANGE.replace('$', '\$').replace('~', '\~') + ' '
+        + BUY_IN_MICRO_DSP + BUY_IN_MICRO_RANGE.replace('$', '\$').replace('~', '\~') + ' '
+        + BUY_IN_LOW_DSP + BUY_IN_LOW_RANGE.replace('$', '\$').replace('~', '\~') + ' '
+        + BUY_IN_MEDIUM_DSP + BUY_IN_MEDIUM_RANGE.replace('$', '\$').replace('~', '\~') + ' '
+        + BUY_IN_HIGH_DSP + BUY_IN_HIGH_RANGE.replace('$', '\$').replace('~', '\~'))
+    st.dataframe(df_tm)
+
+
 # Convert columns to the correct dtype
 df[Cols.BUY_IN] = df[Cols.BUY_IN].astype(float)
 df[Cols.TOTAL_BUY_IN] = df[Cols.TOTAL_BUY_IN].astype(float)
@@ -456,13 +636,14 @@ else:
         BUY_IN_HIGH_DSP
         ]
     selected_buy_in_tags = col_12.multiselect('Buy-in Tags'
-                                            + '  \n'
-                                            + BUY_IN_FREEROLL_DSP + BUY_IN_FREEROLL_RANGE
-                                            + BUY_IN_MICRO_DSP + BUY_IN_MICRO_RANGE
-                                            + '\n'
-                                            + BUY_IN_LOW_DSP + BUY_IN_LOW_RANGE
-                                            + BUY_IN_MEDIUM_DSP + BUY_IN_MEDIUM_RANGE
-                                            + BUY_IN_HIGH_DSP + BUY_IN_HIGH_RANGE, Buy_IN_TAGS, default=[])
+        + '  \n'
+        + BUY_IN_FREEROLL_DSP + BUY_IN_FREEROLL_RANGE.replace('$', '\$').replace('~', '\~')
+        + BUY_IN_MICRO_DSP + BUY_IN_MICRO_RANGE.replace('$', '\$').replace('~', '\~')
+        + '\n'
+        + BUY_IN_LOW_DSP + BUY_IN_LOW_RANGE.replace('$', '\$').replace('~', '\~')
+        + BUY_IN_MEDIUM_DSP + BUY_IN_MEDIUM_RANGE.replace('$', '\$').replace('~', '\~')
+        + BUY_IN_HIGH_DSP + BUY_IN_HIGH_RANGE.replace('$', '\$').replace('~', '\~'),
+        Buy_IN_TAGS, default=[])
 
     # Select Game Type
     game_type_list= df.drop_duplicates(subset=Cols.TOURNAMENT_GAME_TYPE)[Cols.TOURNAMENT_GAME_TYPE].to_list()
@@ -532,161 +713,19 @@ else:
         st.write(f"※exchange rate €1 = \${get_eur_usd_rate()}  1元 =  \${get_cny_usd_rate()} $1 = {get_usd_jpy_rate()}円")
 
         # イン・ザ・マネー分配
-        IMT_df = filtered_df.copy()
-        IMT_df = IMT_df[filtered_df[Cols.RANK_PARCENT_CATEGORY] != '']
+        show_in_the_money_distribution(filtered_df)
 
-        # イン・ザ・マネー分配カテゴリの順序を定義
-        rank_par_category_order = [RANK_PAR_FAIR, RANK_PAR_GOOD, RANK_PAR_VERY_GOOD, RANK_PAR_BEST]
+        # 曜日別
+        show_day_of_week(filtered_df, non_zero_buyin_df)
 
-        # イン・ザ・マネー分配カテゴリ列をCategorical型に変換してカスタム順序を指定
-        IMT_df[Cols.RANK_PARCENT_CATEGORY] = pd.Categorical(IMT_df[Cols.RANK_PARCENT_CATEGORY], categories=rank_par_category_order, ordered=True)
-
-        # イン・ザ・マネー分配カテゴリ列でデータフレームを並び替え
-        IMT_df.sort_values(by=Cols.BUY_IN_CATEGORY, inplace=True)
-
-        df_target = IMT_df.groupby(Cols.RANK_PARCENT_CATEGORY).count() / len(IMT_df) * 100
-
-        st.subheader('イン・ザ・マネー分配')
-        st.bar_chart(df_target['Tournament ID'])
+        # 時間帯別
+        show_time_zone(filtered_df, non_zero_buyin_df)
 
         # Tournament History
-        # 現在の日付から180日前（6か月前）の日付を計算
-        dt_6months_ago = datetime.now() - timedelta(days=HISTORY_DAY_MAX)
-        # 直近6か月のトーナメント成績をフィルタリング
-        history_df = filtered_df[filtered_df[Cols.START_TIME] >= dt_6months_ago]
-        # ソート
-        history_df.sort_values(Cols.START_TIME, ascending=False, inplace=True)
-        if len(history_df) > HISTORY_DISPLAY_MAX:
-            # 100件を抽出
-            history_df = history_df.iloc[0:HISTORY_DISPLAY_MAX -1, :]
-        # インデックスを変更
-        history_df = history_df.set_index(Cols.TOURNAMENT_ID)
-
-        # st.subheader('Tournament History(Depicts up to 100 games of data from the last 6 months.)')
-        st.subheader('Tournament History')
-        st.dataframe(history_df)
-
-        # Export df
-        history_df.to_csv('history.csv')
-
-        ######################
-        ### バイインの内訳 ###
-        ######################
-        # グループ化してトーナメント数をカウント
-        buyin_tournament_count_df = history_df.groupby(Cols.BUY_IN_CATEGORY).size().reset_index(name='Tournaments Count')
-
-        # グループ化して合計獲得賞を集計
-        buyin_prize_df = history_df.groupby(Cols.BUY_IN_CATEGORY).agg({Cols.PRIZE: 'sum'}).reset_index()
-        # 列名をリネーム
-        buyin_prize_df.rename(columns={Cols.PRIZE: 'Total Prize'}, inplace=True)
-
-        # インマネ数をカウント
-        buyin_profit_df = history_df[history_df[Cols.PROFIT] > 0]
-        buyin_ITM_df = buyin_profit_df.groupby(Cols.BUY_IN_CATEGORY).size().reset_index(name='ITM Count')
-
-        # データフレームをマージ
-        buyin_beakdown_ = pd.merge(buyin_ITM_df, buyin_tournament_count_df, on=Cols.BUY_IN_CATEGORY)
-        buyin_beakdown = pd.merge(buyin_beakdown_, buyin_prize_df, on=Cols.BUY_IN_CATEGORY)
-
-        # インマネ率を算出
-        buyin_beakdown['IMT(%)'] = round(buyin_beakdown['ITM Count'] / buyin_beakdown['Tournaments Count'] * 100, 2)
-
-        # バイインカテゴリの順序を定義
-        buyin_category_order = [BUY_IN_FREEROLL_DSP, BUY_IN_MICRO_DSP, BUY_IN_LOW_DSP, BUY_IN_MEDIUM_DSP, BUY_IN_HIGH_DSP]
-
-        loc_count = 10
-        for category in buyin_category_order:
-            if category not in buyin_beakdown.values:
-                buyin_beakdown.loc[str(loc_count)] = [category, 0, 0, 0, 0]
-                loc_count += 1
-
-        # バイインカテゴリ列をCategorical型に変換してカスタム順序を指定
-        buyin_beakdown[Cols.BUY_IN_CATEGORY] = pd.Categorical(buyin_beakdown[Cols.BUY_IN_CATEGORY], categories=buyin_category_order, ordered=True)
-
-        # バイインカテゴリ列でデータフレームを並び替え
-        buyin_beakdown.sort_values(by=Cols.BUY_IN_CATEGORY, inplace=True)
-
-        # インデックスを変更
-        buyin_beakdown = buyin_beakdown.set_index(Cols.BUY_IN_CATEGORY)
-
-        list_1 = []
-        for i in range(len(buyin_category_order)):
-            list_1.append(str(buyin_beakdown.iloc[i, 3]) + '% (' + str(buyin_beakdown.iloc[i, 0]) + ' / ' + str(buyin_beakdown.iloc[i, 1]) + ')')
-
-        list_2 = []
-        for i in range(len(buyin_category_order)):
-            list_2.append('$' + str(round(buyin_beakdown.iloc[i, 2], 2)))
-
-        df_tm = pd.DataFrame(columns=buyin_category_order)
-        df_tm.loc['イン ザ マネー %'] = list_1
-        df_tm.loc['合計賞金'] = list_2
+        history_df = show_tournament_history(filtered_df, HISTORY_DAY_MAX, HISTORY_DISPLAY_MAX)
 
         # バイインの内訳
-        st.subheader('バイインの内訳')
-        st.dataframe(df_tm)
-
-        ##############
-        ### 曜日別 ###
-        ##############
-        # 曜日別のROIを計算
-        daywise_roi = round((non_zero_buyin_df.groupby(Cols.DAY_OF_WEEK)[Cols.PROFIT].sum() / non_zero_buyin_df.groupby(Cols.DAY_OF_WEEK)[Cols.TOTAL_BUY_IN].sum()) * 100, 2)
-        daywise_roi = daywise_roi.reset_index()
-        daywise_roi = daywise_roi.rename(columns={0: 'ROI'})
-
-        # 曜日別のAv ROIを計算
-        daywise_av_roi = round(non_zero_buyin_df.groupby(Cols.DAY_OF_WEEK)['Av ROI'].mean(), 2)
-        daywise_av_roi = daywise_av_roi.reset_index()
-        daywise_av_roi = daywise_av_roi.rename(columns={0: 'Av ROI'})
-
-        # 曜日の順序を定義
-        day_order = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-
-        # 曜日別の参加数
-        day_count = filtered_df.groupby(Cols.DAY_OF_WEEK).size().reset_index(name='Total Tournaments')
-
-        # 曜日列をCategorical型に変換してカスタム順序を指定
-        day_count[Cols.DAY_OF_WEEK] = pd.Categorical(day_count[Cols.DAY_OF_WEEK], categories=day_order, ordered=True)
-
-        # 曜日列でデータフレームを並び替え
-        day_count.sort_values(by=Cols.DAY_OF_WEEK, inplace=True)
-
-        # データフレームをマージ
-        day_of_week_df_ = pd.merge(day_count, daywise_roi, on=Cols.DAY_OF_WEEK)
-        day_of_week_df = pd.merge(day_of_week_df_, daywise_av_roi, on=Cols.DAY_OF_WEEK)
-
-        # インデックスを変更
-        day_of_week_df = day_of_week_df.set_index(Cols.DAY_OF_WEEK)
-
-        # 曜日別集計
-        st.subheader('曜日別集計')
-        st.dataframe(day_of_week_df)
-
-        ################
-        ### 時間帯別 ###
-        ################
-        # 時間帯別のROIを計算
-        timewise_roi = round((non_zero_buyin_df.groupby(Cols.TIME_ZONE)[Cols.PROFIT].sum() / non_zero_buyin_df.groupby(Cols.TIME_ZONE)[Cols.TOTAL_BUY_IN].sum()) * 100, 2)
-        timewise_roi = timewise_roi.reset_index()
-        timewise_roi = timewise_roi.rename(columns={0: 'ROI'})
-
-        # 時間帯別のAv ROIを計算
-        timewise_av_roi = round(non_zero_buyin_df.groupby(Cols.TIME_ZONE)['Av ROI'].mean(), 2)
-        timewise_av_roi = timewise_av_roi.reset_index()
-        timewise_av_roi = timewise_av_roi.rename(columns={0: 'Av ROI'})
-
-        # 時間帯別の参加数
-        time_zone_count = filtered_df.groupby(Cols.TIME_ZONE).size().reset_index(name='Total Tournaments')
-
-        # データフレームをマージ
-        time_zone_df_ = pd.merge(time_zone_count, timewise_roi, on=Cols.TIME_ZONE)
-        time_zone_df = pd.merge(time_zone_df_, timewise_av_roi, on=Cols.TIME_ZONE)
-
-        # インデックスを変更
-        time_zone_df = time_zone_df.set_index(Cols.TIME_ZONE)
-
-        # 時間帯別集計
-        st.subheader('時間帯別集計')
-        st.dataframe(time_zone_df)
+        show_buy_in_breakdown(history_df)
 
 # 画面の下部にTwitterリンクを追加
 st.markdown(

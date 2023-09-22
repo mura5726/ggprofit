@@ -611,11 +611,11 @@ else:
 
         list_1 = []
         for i in range(len(buyin_category_order)):
-            list_1.append(str(buyin_beakdown.iloc[i, 2]) + '% (' + str(buyin_beakdown.iloc[i, 0]) + ' / ' + str(buyin_beakdown.iloc[i, 1]) + ')')
+            list_1.append(str(buyin_beakdown.iloc[i, 3]) + '% (' + str(buyin_beakdown.iloc[i, 0]) + ' / ' + str(buyin_beakdown.iloc[i, 1]) + ')')
 
         list_2 = []
         for i in range(len(buyin_category_order)):
-            list_2.append('$' + str(round(buyin_beakdown.iloc[i, 3], 2)))
+            list_2.append('$' + str(round(buyin_beakdown.iloc[i, 2], 2)))
 
         df_tm = pd.DataFrame(columns=buyin_category_order)
         df_tm.loc['イン ザ マネー %'] = list_1

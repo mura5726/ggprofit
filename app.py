@@ -226,49 +226,6 @@ def parse_file(filepath=None, lines=None):
     return tournament_id, tournament_name, tournament_game_type, buy_in, total_buy_in, \
             prize, start_time, reentry_count, players, total_prize, rank, rank_parcent
 
-# Initialize DataFrame with dtype
-# Tournament Name column added for demonstration. Please populate it correctly.
-df = pd.DataFrame(columns=[
-    Cols.TOURNAMENT_ID,
-    Cols.TOURNAMENT_NAME,
-    Cols.TOURNAMENT_GAME_TYPE,
-    Cols.BUY_IN,
-    Cols.TOTAL_BUY_IN,
-    Cols.PRIZE,
-    Cols.START_TIME,
-    Cols.PLAYERS,
-    Cols.TOTAL_PRIZE_POOL,
-    Cols.RANK,
-    Cols.ENTRY_COUNT], dtype=object)
-
-# Directory where the text files are stored (please adjust this path accordingly)
-directory_path = './tournaments/'
-
-try:
-    for filename in os.listdir(directory_path):
-        if filename.endswith('.txt'):
-            filepath = os.path.join(directory_path, filename)
-            tournament_id, tournament_name, tournament_game_type, buy_in, total_buy_in, \
-            prize, start_time, entry_count, players, total_prize, rank, rank_parcent = parse_file(filepath)
-            new_row = pd.DataFrame({
-                Cols.TOURNAMENT_ID: [tournament_id],
-                Cols.TOURNAMENT_NAME: [tournament_name],
-                Cols.TOURNAMENT_GAME_TYPE: [tournament_game_type],
-                Cols.BUY_IN: [buy_in],
-                Cols.TOTAL_BUY_IN: [total_buy_in],
-                Cols.PRIZE: [prize],
-                Cols.START_TIME: [start_time],
-                Cols.PLAYERS: [players],
-                Cols.TOTAL_PRIZE_POOL: [total_prize],
-                Cols.RANK: [rank],
-                Cols.ENTRY_COUNT: [entry_count],
-                Cols.RANK_PARCENT: [rank_parcent]
-                },  dtype=object)
-            df = pd.concat([df, new_row], ignore_index=True)
-
-except Exception as e:
-    print(f"An error occurred while reading files from {directory_path}: {e}")
-
 def categorize_buyin(buyin: float) -> str:
     """
     バイインをカテゴリに振り分ける関数
@@ -487,6 +444,50 @@ def show_buy_in_breakdown(df: pd.DataFrame) -> None:
         + BUY_IN_HIGH_DSP + BUY_IN_HIGH_RANGE.replace('$', '\$').replace('~', '\~'))
     st.dataframe(df_tm)
 
+# Initialize DataFrame with dtype
+# Tournament Name column added for demonstration. Please populate it correctly.
+df = pd.DataFrame(columns=[
+    Cols.TOURNAMENT_ID,
+    Cols.TOURNAMENT_NAME,
+    Cols.TOURNAMENT_GAME_TYPE,
+    Cols.BUY_IN,
+    Cols.TOTAL_BUY_IN,
+    Cols.PRIZE,
+    Cols.START_TIME,
+    Cols.PLAYERS,
+    Cols.TOTAL_PRIZE_POOL,
+    Cols.RANK,
+    Cols.ENTRY_COUNT,
+    Cols.RANK_PARCENT
+    ], dtype=object)
+
+# Directory where the text files are stored (please adjust this path accordingly)
+directory_path = './tournaments/'
+
+try:
+    for filename in os.listdir(directory_path):
+        if filename.endswith('.txt'):
+            filepath = os.path.join(directory_path, filename)
+            tournament_id, tournament_name, tournament_game_type, buy_in, total_buy_in, \
+            prize, start_time, entry_count, players, total_prize, rank, rank_parcent = parse_file(filepath)
+            new_row = pd.DataFrame({
+                Cols.TOURNAMENT_ID: [tournament_id],
+                Cols.TOURNAMENT_NAME: [tournament_name],
+                Cols.TOURNAMENT_GAME_TYPE: [tournament_game_type],
+                Cols.BUY_IN: [buy_in],
+                Cols.TOTAL_BUY_IN: [total_buy_in],
+                Cols.PRIZE: [prize],
+                Cols.START_TIME: [start_time],
+                Cols.PLAYERS: [players],
+                Cols.TOTAL_PRIZE_POOL: [total_prize],
+                Cols.RANK: [rank],
+                Cols.ENTRY_COUNT: [entry_count],
+                Cols.RANK_PARCENT: [rank_parcent]
+                },  dtype=object)
+            df = pd.concat([df, new_row], ignore_index=True)
+
+except Exception as e:
+    print(f"An error occurred while reading files from {directory_path}: {e}")
 
 # Convert columns to the correct dtype
 df[Cols.BUY_IN] = df[Cols.BUY_IN].astype(float)

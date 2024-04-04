@@ -45,7 +45,7 @@ This project is a web application for tracking your performance in poker tournam
 ## Folder Structure
 
 ```
-poker-tournament-profit-tracker/
+ggprofit/
 │
 ├── app.py                      # Main Streamlit application file
 ├── requirements.txt            # Project dependencies
@@ -77,4 +77,4 @@ If you would like to contribute, please fork the repository and create a pull re
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
-test
+
